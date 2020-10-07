@@ -1,0 +1,4 @@
+bazel clean
+bazel build //:all
+bazel build @gtest//:gtest
+

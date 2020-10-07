@@ -1,0 +1,29 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("@bazel_gazelle//:def.bzl", "gazelle")
+
+# Lets you run `bazel run //:gazelle` to generate BUILD files. Will need to be
+# re-run if any of the directives below are changed.
+
+# gazelle:prefix github.com/irfansharif/test-repo
+# gazelle:build_file_name BUILD.bazel
+
+gazelle(
+    name = "gazelle",
+    prefix = "github.com/irfansharif/test-repo",
+)
+
+go_library(
+    name = "test_repo_lib",
+    srcs = ["main.go"],
+    cgo = True,
+    cdeps = ["@gtest//:gtest"],
+    cppopts = ["-Iexternal/gtest/googletest/include/gtest"],
+    importpath = "github.com/irfansharif/test-repo",
+    visibility = ["//visibility:private"],
+)
+
+go_binary(
+    name = "testrepo",
+    embed = [":test_repo_lib"],
+    visibility = ["//visibility:public"],
+)
