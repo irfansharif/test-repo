@@ -16,8 +16,8 @@ go_library(
     name = "test_repo_lib",
     srcs = ["main.go"],
     cgo = True,
-    cdeps = ["@gtest//:gtest"],
-    cppopts = ["-Iexternal/gtest/googletest/include/gtest"],
+    cdeps = ["//:libroach"],
+    cppopts = ["-Ic-deps/libroach/include"], # XXX: shouldn't this include /external?
     importpath = "github.com/irfansharif/test-repo",
     visibility = ["//visibility:private"],
 )
@@ -25,5 +25,51 @@ go_library(
 go_binary(
     name = "testrepo",
     embed = [":test_repo_lib"],
+    visibility = ["//visibility:public"],
+)
+
+load("@rules_foreign_cc//tools/build_defs:cmake.bzl", "cmake_external")
+
+cmake_external(
+    name = "rocksdb",
+    cache_entries = {
+      "DCMAKE_TARGET_MESSAGES": "OFF",
+      "DWITH_GFLAGS": "OFF",
+      "DSNAPPY_LIBRARIES": "/Users/irfansharif/Software/native/x86_64-apple-darwin19.6.0/snappy/libsnappy.a",
+      "DSNAPPY_INCLUDE_DIR": "/Users/irfansharif/Software/src/github.com/cockroachdb/cockroach/c-deps/snappy;/Users/irfansharif/Software/native/x86_64-apple-darwin19.6.0/snappy",
+      "DWITH_SNAPPY": "ON",
+      "DJEMALLOC_LIBRARIES":"/Users/irfansharif/Software/native/x86_64-apple-darwin19.6.0/jemalloc/lib/libjemalloc.a",
+      "DJEMALLOC_INCLUDE_DIR":"/Users/irfansharif/Software/native/x86_64-apple-darwin19.6.0/jemalloc/include",
+      "DWITH_JEMALLOC": "ON",
+      "DCMAKE_BUILD_TYPE": "Release",
+      "DUSE_RTT": "1",
+      "DFAIL_ON_WARNINGS": "0",
+    },
+    env_vars = {
+        "CFLAGS":" -msse3",
+        "CXXFLAGS":" -msse3",
+    },
+    lib_source = "@rocksdb//:all",
+    static_libraries = ["librocksdb.a"],
+    visibility = ["//visibility:public"],
+    make_commands = ["make rocksdb"],
+)
+
+cc_library(
+  name = "libroach",
+  srcs = glob(["*.cc", "*.c", "*.h"]),
+  visibility = ["//visibility:public"],
+  deps = ["//:rocksdb"],
+  includes = ["external/rocksdb/include"],
+)
+
+cmake_external(
+    name = "snappy",
+    cache_entries = {
+        "DCMAKE_BUILD_TYPE":"Release",
+        "DCMAKE_TARGET_MESSAGES":"OFF",
+    },
+    lib_source = "@snappy//:all",
+    static_libraries = ["libsnappy.a"],
     visibility = ["//visibility:public"],
 )

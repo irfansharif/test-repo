@@ -34,19 +34,54 @@ load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 
 gazelle_dependencies()
 
+http_archive(
+   name = "rules_foreign_cc",
+   strip_prefix = "rules_foreign_cc-master",
+   url = "https://github.com/bazelbuild/rules_foreign_cc/archive/master.zip",
+)
+
+load("@rules_foreign_cc//:workspace_definitions.bzl", "rules_foreign_cc_dependencies")
+
+rules_foreign_cc_dependencies()
+
+BUILD_ALL_CONTENT = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//visibility:public"])"""
+
 new_local_repository(
     name = "libroach",
     path = "c-deps/libroach",
-    build_file = "libroach.BUILD",
+    build_file_content = BUILD_ALL_CONTENT,
 )
 
 new_local_repository(
     name = "rocksdb",
     path = "c-deps/rocksdb",
-    build_file = "rocksdb.BUILD",
+    build_file_content = BUILD_ALL_CONTENT,
+)
+
+new_local_repository(
+    name = "snappy",
+    path = "c-deps/snappy",
+    build_file_content = BUILD_ALL_CONTENT,
 )
 
 local_repository(
     name = "gtest",
     path = "c-deps/googletest",
+)
+
+new_local_repository(
+   name = "cryptopp",
+   path = "c-deps/cryptopp",
+   build_file_content = BUILD_ALL_CONTENT,
+)
+
+cmake_external(
+    name = "cryptopp",
+    cache_entries = {
+        "DCMAKE_BUILD_TYPE":"Release",
+        "DCMAKE_TARGET_MESSAGES":"OFF",
+    },
+    lib_source = "@cryptopp//:all",
+    static_libraries = ["libcryptopp.a"],
+    visibility = ["//visibility:public"],
 )

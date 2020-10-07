@@ -2,12 +2,13 @@ package main
 
 import "fmt"
 
-// #cgo CXXFLAGS: -std=c++14
-// #cgo CPPFLAGS: -Ic-deps/googletest/googletest/include/gtest
+// #cgo CPPFLAGS: -Ic-deps/libroach/include
+// #cgo CPPFLAGS: -Ic-deps/rocksdb/include
 //
-// #include <gtest.h>
+// #include <libroach.h>
+// #include <rocksdb/db.h>
 import "C"
 
 func main() {
-	fmt.Println("vim-go")
+	fmt.Println("sup losers!")
 }
