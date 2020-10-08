@@ -45,11 +45,12 @@ load("@rules_foreign_cc//:workspace_definitions.bzl", "rules_foreign_cc_dependen
 rules_foreign_cc_dependencies()
 
 BUILD_ALL_CONTENT = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//visibility:public"])"""
+BUILD_LR_CONTENT = """filegroup(name = "lrf", srcs = glob(["**"]), visibility = ["//visibility:public"])"""
 
 new_local_repository(
-    name = "libroach",
-    path = "c-deps/libroach",
-    build_file_content = BUILD_ALL_CONTENT,
+    name = "lr",
+    path = "./c-deps",
+    build_file_content = BUILD_LR_CONTENT,
 )
 
 new_local_repository(
@@ -58,11 +59,11 @@ new_local_repository(
     build_file_content = BUILD_ALL_CONTENT,
 )
 
-new_local_repository(
-    name = "snappy",
-    path = "c-deps/snappy",
-    build_file_content = BUILD_ALL_CONTENT,
-)
+# new_local_repository(
+#     name = "snappy",
+#     path = "c-deps/snappy",
+#     build_file_content = BUILD_ALL_CONTENT,
+# )
 
 local_repository(
     name = "gtest",
@@ -70,18 +71,13 @@ local_repository(
 )
 
 new_local_repository(
+    name = "googletest",
+    path = "c-deps/googletest",
+    build_file_content = BUILD_ALL_CONTENT,
+)
+
+new_local_repository(
    name = "cryptopp",
    path = "c-deps/cryptopp",
    build_file_content = BUILD_ALL_CONTENT,
-)
-
-cmake_external(
-    name = "cryptopp",
-    cache_entries = {
-        "DCMAKE_BUILD_TYPE":"Release",
-        "DCMAKE_TARGET_MESSAGES":"OFF",
-    },
-    lib_source = "@cryptopp//:all",
-    static_libraries = ["libcryptopp.a"],
-    visibility = ["//visibility:public"],
 )

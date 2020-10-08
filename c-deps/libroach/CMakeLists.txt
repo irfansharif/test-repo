@@ -123,12 +123,13 @@ add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} -V)
 # Add googletest and get around a weird cmake issue:
 # https://gitlab.kitware.com/cmake/cmake/issues/16920
 set(THREADS_PTHREAD_ARG "2" CACHE STRING "Forcibly set by CMakeLists.txt." FORCE)
-add_subdirectory(../googletest/googletest
-                 ${CMAKE_BINARY_DIR}/googletest
-                 EXCLUDE_FROM_ALL)
+
+# add_subdirectory(../googletest/googletest
+#                  ${CMAKE_BINARY_DIR}/googletest
+#                  EXCLUDE_FROM_ALL)
 
 # TODO(benesch): make this required when CMake 3.9 is widely deployed.
-include(GoogleTest OPTIONAL)
+# include(GoogleTest OPTIONAL)
 
 # Iterate over all test sources.
 foreach(tsrc ${tests})
@@ -160,7 +161,7 @@ foreach(tsrc ${tests})
 
 	# Set includes/libraries/properties.
   target_include_directories(${tname}
-    PRIVATE ../googletest/googletest/include
+    # PRIVATE ../googletest/googletest/include
     PRIVATE ../protobuf/src
     PRIVATE ../rocksdb/include
     PRIVATE protos
