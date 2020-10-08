@@ -3,10 +3,9 @@ package main
 import "fmt"
 
 // #cgo CPPFLAGS: -Ic-deps/libroach/include
-// #cgo CPPFLAGS: -Ic-deps/rocksdb/include
 //
+// #include <stdlib.h>
 // #include <libroach.h>
-// #include <rocksdb/db.h>
 import "C"
 
 func main() {

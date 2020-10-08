@@ -13,93 +13,148 @@ gazelle(
 )
 
 go_library(
-    name = "test_repo_lib",
-    srcs = ["main.go"],
+    name = "libmain",
+    srcs = ["main.go", "@libroachv2//:all"],
     cdeps = ["//:libroach"],
     cgo = True,
     cppopts = [
-        "-Ic-deps/libroach/include",
-        "-Ic-deps/rocksdb/include",
-    ],  # XXX: shouldn't this include /external?
+        "-Iexternal/libroach/include",
+    ],
     importpath = "github.com/irfansharif/test-repo",
     visibility = ["//visibility:private"],
 )
 
 go_binary(
-    name = "testrepo",
-    embed = [":test_repo_lib"],
+    name = "binary",
+    embed = [":libmain"],
     visibility = ["//visibility:public"],
 )
 
 load("@rules_foreign_cc//tools/build_defs:cmake.bzl", "cmake_external")
 
-# cmake_external(
-#     name = "rocksdb",
-#     cache_entries = {
-#         "DCMAKE_TARGET_MESSAGES": "OFF",
-#         "DWITH_GFLAGS": "OFF",
-#         # "DSNAPPY_LIBRARIES": "/Users/irfansharif/Software/native/x86_64-apple-darwin19.6.0/snappy/libsnappy.a",
-#         # XXX: I don't think these flags are getting used.
-#         "DSNAPPY_LIBRARIES": "external/snappy/libsnappy.a",
-#         # "DSNAPPY_INCLUDE_DIR": "/Users/irfansharif/Software/src/github.com/cockroachdb/cockroach/c-deps/snappy;/Users/irfansharif/Software/native/x86_64-apple-darwin19.6.0/snappy",
-#         "DSNAPPY_INCLUDE_DIR": "external/snappy",
-#         "DWITH_SNAPPY": "ON",
-#         "DJEMALLOC_LIBRARIES": "/Users/irfansharif/Software/native/x86_64-apple-darwin19.6.0/jemalloc/lib/libjemalloc.a",
-#         "DJEMALLOC_INCLUDE_DIR": "/Users/irfansharif/Software/native/x86_64-apple-darwin19.6.0/jemalloc/include",
-#         "DWITH_JEMALLOC": "ON",
-#         "DCMAKE_BUILD_TYPE": "Release",
-#         "DUSE_RTT": "1",
-#         "DFAIL_ON_WARNINGS": "0",
-#     },
-#     env_vars = {
-#         "CFLAGS": " -msse3",
-#         "CXXFLAGS": " -msse3",
-#     },
-#     lib_source = "@rocksdb//:all",
-#     make_commands = ["make rocksdb && mkdir -p rocksdb/lib && mv librocksdb.a rocksdb/lib/librocksdb.a"],
-#     # make_commands = ["make help && mkdir -p rocksdb/lib && touch rocksdb/lib/librocksdb.a "],
-#     static_libraries = ["librocksdb.a"],
-#     visibility = ["//visibility:public"],
-#     # deps = ["//:snappy"],
-# )
-
+# TODO(irfansharif): It's not able to find rocksdb headers for some reason.
 cmake_external(
     name = "libroach",
     cache_entries = {
-        "DCMAKE_TARGET_MESSAGES": "OFF",
-        "DCMAKE_BUILD_TYPE": "Release",
-        "DPROTOBUF_LIB": "/Users/irfansharif/Software/native/x86_64-apple-darwin19.6.0/protobuf/libprotobuf.a",
-        "DROCKSDB_LIB": "/Users/irfansharif/Software/native/x86_64-apple-darwin19.6.0/rocksdb/librocksdb.a",
-        "DJEMALLOC_LIB": "/Users/irfansharif/Software/native/x86_64-apple-darwin19.6.0/jemalloc/lib/libjemalloc.a",
-        "DSNAPPY_LIB": "/Users/irfansharif/Software/native/x86_64-apple-darwin19.6.0/snappy/libsnappy.a",
-        "DCRYPTOPP_LIB": "/Users/irfansharif/Software/native/x86_64-apple-darwin19.6.0/cryptopp/libcryptopp.a",
+        "CMAKE_TARGET_MESSAGES": "OFF",
+        "CMAKE_BUILD_TYPE": "Release",
+        "ROCKSDB_LIB": "$EXT_BUILD_DEPS/librocksdb/lib/librocksdb.a",
+        "SNAPPY_LIB": "$EXT_BUILD_DEPS/libsnappy/lib/libsnappy.a",
+        "CRYPTOPP_LIB": "$EXT_BUILD_DEPS/libcryptopp/lib/libcryptopp.a",
+        "JEMALLOC_LIB": "$EXT_BUILD_DEPS/libjemalloc/lib/libjemalloc.a",
+        # TODO(irfansharif): Use proper targets for this.
+        "PROTOBUF_LIB": "/Users/irfansharif/Software/native/x86_64-apple-darwin19.6.0/protobuf/libprotobuf.a",
     },
-    lib_source = "@lr//:lrf",
-    make_commands = ["make roach && mkdir -p libroach/lib && mv libroach.a libroach/lib/libroach.a"],
-    # make_commands = ["make help && mkdir -p libroach/lib && touch libroach/lib/libroach.a"],
+    lib_source = "@libroach//:all",
+    make_commands = ["make roach",
+                     "mkdir -p libroach/lib",
+                     "mv libroach.a libroach/lib/libroach.a",
+    ],
     static_libraries = ["libroach.a"],
     visibility = ["//visibility:public"],
-    working_directory = "libroach",
+    tools_deps = ["@googletest//:all", "@rocksdb//:all", "@protobuf//:all", "@libroach//:all"],
+    deps = [":libsnappy", ":librocksdb", ":libcryptopp", ":libjemalloc"],
 )
 
-# cmake_external(
-#     name = "snappy",
-#     cache_entries = {
-#         "DCMAKE_BUILD_TYPE": "Release",
-#         "DCMAKE_TARGET_MESSAGES": "OFF",
-#     },
-#     lib_source = "@snappy//:all",
-#     static_libraries = ["libsnappy.a"],
-#     visibility = ["//visibility:public"],
-# )
+cmake_external(
+    name = "librocksdb",
+    cache_entries = {
+        "CMAKE_TARGET_MESSAGES": "OFF",
+        "WITH_GFLAGS": "OFF",
+        "SNAPPY_LIBRARIES": "$EXT_BUILD_DEPS/libsnappy/lib/libsnappy.a",
+        "SNAPPY_INCLUDE_DIR": "$EXT_BUILD_DEPS/libsnappy/include",
+        "WITH_SNAPPY": "ON",
+        "JEMALLOC_LIBRARIES": "/Users/irfansharif/Software/native/x86_64-apple-darwin19.6.0/jemalloc/lib/libjemalloc.a",
+        "JEMALLOC_INCLUDE_DIR": "/Users/irfansharif/Software/native/x86_64-apple-darwin19.6.0/jemalloc/include",
+        "WITH_JEMALLOC": "ON",
+        "CMAKE_BUILD_TYPE": "Release",
+        "USE_RTT": "1",
+        "FAIL_ON_WARNINGS": "0",
+    },
+    env_vars = {
+        "CFLAGS": " -msse3",
+        "CXXFLAGS": " -msse3",
+    },
+    lib_source = "@rocksdb//:all",
+    make_commands = [
+        "make rocksdb",
+        "mkdir -p librocksdb/lib",
+        "mv librocksdb.a librocksdb/lib/librocksdb.a",
+    ],
+    static_libraries = ["librocksdb.a"],
+    visibility = ["//visibility:public"],
+    deps = [":libsnappy"],
+)
 
 cmake_external(
-    name = "cryptopp",
+    name = "libsnappy",
     cache_entries = {
-        "DCMAKE_BUILD_TYPE": "Release",
-        "DCMAKE_TARGET_MESSAGES": "OFF",
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_TARGET_MESSAGES": "OFF",
+    },
+    lib_source = "@snappy//:all",
+    static_libraries = ["libsnappy.a"],
+    visibility = ["//visibility:public"],
+    alwayslink = True,
+)
+
+cmake_external(
+    name = "libcryptopp",
+    cache_entries = {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_TARGET_MESSAGES": "OFF",
     },
     lib_source = "@cryptopp//:all",
     static_libraries = ["libcryptopp.a"],
     visibility = ["//visibility:public"],
+)
+
+load("@rules_foreign_cc//tools/build_defs:configure.bzl", "configure_make")
+
+configure_make(
+    name = "libjemalloc",
+    # configure_in_place = True,
+    autoconf = True,
+    configure_options = [
+        "--enable-prof",
+    ] + select({
+        "//conditions:default": ["AR=/usr/bin/ar"],
+    }),
+    lib_source = "@jemalloc//:all",
+    static_libraries = ["libjemalloc.a"],
+    visibility = ["//visibility:public"],
+    make_commands = [
+        "make build_lib_static",
+        "mkdir -p libjemalloc/lib",
+        "cp lib/libjemalloc.a libjemalloc/lib",
+    ],
+)
+
+configure_make(
+    name = "libkrb5",
+    autoreconf = True,
+    # configure_in_place = True,
+    configure_command = "src/configure",
+    configure_options = [
+        "--enable-static",
+        "--disable-shared",
+    ] + select({
+        "//conditions:default": ["AR=/usr/bin/ar"],
+    }),
+    configure_env_vars = {
+        "CPFLAGS": "",
+        "CXXFLAGS": "",
+        },
+    # cache_entries = {
+    #     "protobuf_BUILD_TESTS": "OFF",
+    #     "CMAKE_BUILD_TYPE": "Release",
+    # },
+    lib_source = "@krb5//:all",
+    static_libraries = ["libgssapi_krb5.a"],
+    visibility = ["//visibility:public"],
+    make_commands = [
+        "make",
+        "mkdir -p libkrb5/lib",
+        "cp libkrb5/libgssapi_krb5.a libkrb5/lib",
+    ],
 )

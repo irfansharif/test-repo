@@ -34,10 +34,16 @@ load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 
 gazelle_dependencies()
 
-http_archive(
+# http_archive(
+#    name = "rules_foreign_cc",
+#    strip_prefix = "rules_foreign_cc-master",
+#    url = "https://github.com/bazelbuild/rules_foreign_cc/archive/master.zip",
+# )
+
+git_repository(
    name = "rules_foreign_cc",
-   strip_prefix = "rules_foreign_cc-master",
-   url = "https://github.com/bazelbuild/rules_foreign_cc/archive/master.zip",
+   commit = "f6a15abd55be915b914aa618b50831bf5981340f",
+   remote = "https://github.com/otan-cockroach/rules_foreign_cc",
 )
 
 load("@rules_foreign_cc//:workspace_definitions.bzl", "rules_foreign_cc_dependencies")
@@ -45,12 +51,19 @@ load("@rules_foreign_cc//:workspace_definitions.bzl", "rules_foreign_cc_dependen
 rules_foreign_cc_dependencies()
 
 BUILD_ALL_CONTENT = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//visibility:public"])"""
-BUILD_LR_CONTENT = """filegroup(name = "lrf", srcs = glob(["**"]), visibility = ["//visibility:public"])"""
+BUILD_LBR_CONTENT = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//visibility:public"])"""
+BUILD_LBH_CONTENT = """filegroup(name = "all", srcs = glob(["*.h"]), visibility = ["//visibility:public"])"""
 
 new_local_repository(
-    name = "lr",
-    path = "./c-deps",
-    build_file_content = BUILD_LR_CONTENT,
+    name = "libroach",
+    path = "c-deps/libroach",
+    build_file_content = BUILD_LBR_CONTENT,
+)
+
+new_local_repository(
+    name = "libroachv2",
+    path = "c-deps/libroach",
+    build_file_content = BUILD_LBH_CONTENT,
 )
 
 new_local_repository(
@@ -58,12 +71,6 @@ new_local_repository(
     path = "c-deps/rocksdb",
     build_file_content = BUILD_ALL_CONTENT,
 )
-
-# new_local_repository(
-#     name = "snappy",
-#     path = "c-deps/snappy",
-#     build_file_content = BUILD_ALL_CONTENT,
-# )
 
 local_repository(
     name = "gtest",
@@ -77,7 +84,31 @@ new_local_repository(
 )
 
 new_local_repository(
+    name = "snappy",
+    path = "c-deps/snappy",
+    build_file_content = BUILD_ALL_CONTENT,
+)
+
+new_local_repository(
    name = "cryptopp",
    path = "c-deps/cryptopp",
    build_file_content = BUILD_ALL_CONTENT,
+)
+
+new_local_repository(
+    name = "protobuf",
+    path = "c-deps/protobuf",
+    build_file_content = BUILD_ALL_CONTENT,
+)
+
+new_local_repository(
+    name = "krb5",
+    path = "c-deps/krb5",
+    build_file_content = BUILD_ALL_CONTENT,
+)
+
+new_local_repository(
+  name = "jemalloc",
+  path = "c-deps/jemalloc",
+  build_file_content = BUILD_ALL_CONTENT,
 )
