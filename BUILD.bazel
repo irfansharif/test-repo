@@ -17,14 +17,6 @@ go_library(
     srcs = ["main.go"],
     cdeps = ["//:libroach"],
     cgo = True,
-    # TODO(irfansharif): How do we avoid referring to bazel-out/darwin-fastbuild
-    clinkopts = [
-        "-L bazel-out/darwin-fastbuild/bin/libroach/lib",
-        "-lroach",
-    ],
-    cppopts = [
-        "-Ibazel-out/darwin-fastbuild/bin/libroach/include",
-    ],
     importpath = "github.com/irfansharif/test-repo",
     visibility = ["//visibility:private"],
 )
