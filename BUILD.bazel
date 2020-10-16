@@ -14,48 +14,77 @@ gazelle(
 
 go_library(
     name = "libmain",
-    srcs = ["main.go", "@libroachv2//:all"],
+    srcs = ["main.go"],
     cdeps = ["//:libroach"],
     cgo = True,
+    # TODO(irfansharif): How do we avoid referring to bazel-out/darwin-fastbuild
+    clinkopts = [
+        "-Lbazel-out/darwin-fastbuild/bin/libroach/lib",
+        "-lroach",
+    ],
     cppopts = [
-        "-Iexternal/libroach/include",
+        "-Ibazel-out/darwin-fastbuild/bin/libroach/include",
     ],
     importpath = "github.com/irfansharif/test-repo",
     visibility = ["//visibility:private"],
 )
 
 go_binary(
-    name = "binary",
+    name = "main",
     embed = [":libmain"],
     visibility = ["//visibility:public"],
 )
 
+# Load the components that lets us use cmake/make in third party deps.
 load("@rules_foreign_cc//tools/build_defs:cmake.bzl", "cmake_external")
+load("@rules_foreign_cc//tools/build_defs:configure.bzl", "configure_make")
 
+# Build target for libroach.
+#
 # TODO(irfansharif): It's not able to find rocksdb headers for some reason.
 cmake_external(
     name = "libroach",
     cache_entries = {
         "CMAKE_TARGET_MESSAGES": "OFF",
         "CMAKE_BUILD_TYPE": "Release",
-        "ROCKSDB_LIB": "$EXT_BUILD_DEPS/librocksdb/lib/librocksdb.a",
-        "SNAPPY_LIB": "$EXT_BUILD_DEPS/libsnappy/lib/libsnappy.a",
         "CRYPTOPP_LIB": "$EXT_BUILD_DEPS/libcryptopp/lib/libcryptopp.a",
         "JEMALLOC_LIB": "$EXT_BUILD_DEPS/libjemalloc/lib/libjemalloc.a",
-        # TODO(irfansharif): Use proper targets for this.
-        "PROTOBUF_LIB": "/Users/irfansharif/Software/native/x86_64-apple-darwin19.6.0/protobuf/libprotobuf.a",
+        "PROTOBUF_LIB": "$EXT_BUILD_DEPS/libprotobuf/lib/libprotobuf.a",
+        "ROCKSDB_LIB": "$EXT_BUILD_DEPS/librocksdb/lib/librocksdb.a",
+        "SNAPPY_LIB": "$EXT_BUILD_DEPS/libsnappy/lib/libsnappy.a",
     },
     lib_source = "@libroach//:all",
-    make_commands = ["make roach",
-                     "mkdir -p libroach/lib",
-                     "mv libroach.a libroach/lib/libroach.a",
+    make_commands = [
+        "make roach",
+        "mkdir -p libroach/lib",
+        "mv libroach.a libroach/lib/libroach.a",
+        "cp -r $EXT_BUILD_ROOT/external/libroach/include libroach",
     ],
     static_libraries = ["libroach.a"],
     visibility = ["//visibility:public"],
     tools_deps = ["@googletest//:all", "@rocksdb//:all", "@protobuf//:all", "@libroach//:all"],
-    deps = [":libsnappy", ":librocksdb", ":libcryptopp", ":libjemalloc"],
+    deps = [":libsnappy", ":librocksdb", ":libcryptopp", ":libjemalloc", ":libprotobuf"],
 )
 
+# Build targets for libprotobuf and protoc.
+cmake_external(
+    name = "libprotobuf",
+    cache_entries = {
+        "CMAKE_BUILD_TYPE":"Release",
+        "CMAKE_TARGET_MESSAGES":"OFF",
+        "protobuf_BUILD_TESTS":"OFF",
+    },
+    lib_source = "@protobuf//:all",
+    static_libraries = ["libprotobuf.a"],
+    binaries = ["protoc"],
+    visibility = ["//visibility:public"],
+    working_directory = "cmake",
+)
+
+# Build target for librocksdb.
+#
+# XXX: Due to https://github.com/bazelbuild/rules_foreign_cc/issues/239, we
+# elide usage of __DATE__ by hand in RocksDB.
 cmake_external(
     name = "librocksdb",
     cache_entries = {
@@ -64,8 +93,8 @@ cmake_external(
         "SNAPPY_LIBRARIES": "$EXT_BUILD_DEPS/libsnappy/lib/libsnappy.a",
         "SNAPPY_INCLUDE_DIR": "$EXT_BUILD_DEPS/libsnappy/include",
         "WITH_SNAPPY": "ON",
-        "JEMALLOC_LIBRARIES": "/Users/irfansharif/Software/native/x86_64-apple-darwin19.6.0/jemalloc/lib/libjemalloc.a",
-        "JEMALLOC_INCLUDE_DIR": "/Users/irfansharif/Software/native/x86_64-apple-darwin19.6.0/jemalloc/include",
+        "JEMALLOC_LIBRARIES": "$EXT_BUILD_DEPS/libjemalloc/lib/libjemalloc.a",
+        "JEMALLOC_INCLUDE_DIR": "$EXT_BUILD_DEPS/libjemalloc/include",
         "WITH_JEMALLOC": "ON",
         "CMAKE_BUILD_TYPE": "Release",
         "USE_RTT": "1",
@@ -79,25 +108,14 @@ cmake_external(
     make_commands = [
         "make rocksdb",
         "mkdir -p librocksdb/lib",
-        "mv librocksdb.a librocksdb/lib/librocksdb.a",
+        "cp librocksdb.a librocksdb/lib/librocksdb.a",
     ],
     static_libraries = ["librocksdb.a"],
     visibility = ["//visibility:public"],
-    deps = [":libsnappy"],
+    deps = [":libsnappy", ":libjemalloc"],
 )
 
-cmake_external(
-    name = "libsnappy",
-    cache_entries = {
-        "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_TARGET_MESSAGES": "OFF",
-    },
-    lib_source = "@snappy//:all",
-    static_libraries = ["libsnappy.a"],
-    visibility = ["//visibility:public"],
-    alwayslink = True,
-)
-
+# Build target for libcryptopp.
 cmake_external(
     name = "libcryptopp",
     cache_entries = {
@@ -109,11 +127,12 @@ cmake_external(
     visibility = ["//visibility:public"],
 )
 
-load("@rules_foreign_cc//tools/build_defs:configure.bzl", "configure_make")
-
+# Build target for libjemalloc.
+#
+# XXX: I think we need `configure_in_place = True` here. Look towards Oliver's
+# branch.
 configure_make(
     name = "libjemalloc",
-    # configure_in_place = True,
     autoconf = True,
     configure_options = [
         "--enable-prof",
@@ -127,13 +146,30 @@ configure_make(
         "make build_lib_static",
         "mkdir -p libjemalloc/lib",
         "cp lib/libjemalloc.a libjemalloc/lib",
+        "cp -r include libjemalloc",
     ],
 )
 
+# Build target for libsnappy.
+cmake_external(
+    name = "libsnappy",
+    cache_entries = {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_TARGET_MESSAGES": "OFF",
+    },
+    lib_source = "@snappy//:all",
+    static_libraries = ["libsnappy.a"],
+    visibility = ["//visibility:public"],
+    alwayslink = True,
+)
+
+# Build target for kerberos.
+#
+# TODO(irfansharif): Kerboros is not intended for anything other than Linux.
+# The following has not been tested as yet.
 configure_make(
     name = "libkrb5",
     autoreconf = True,
-    # configure_in_place = True,
     configure_command = "src/configure",
     configure_options = [
         "--enable-static",
@@ -145,10 +181,6 @@ configure_make(
         "CPFLAGS": "",
         "CXXFLAGS": "",
         },
-    # cache_entries = {
-    #     "protobuf_BUILD_TESTS": "OFF",
-    #     "CMAKE_BUILD_TYPE": "Release",
-    # },
     lib_source = "@krb5//:all",
     static_libraries = ["libgssapi_krb5.a"],
     visibility = ["//visibility:public"],
